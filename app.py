@@ -11,7 +11,8 @@ qa_data = [
     {"q": "الضمان كم؟", "a": "الضمان سنة كاملة ضد عيوب الصناعة."},
     {"q": "بتقبلوا أقساط؟", "a": "نعم، لدينا تقسيط عبر شركات محددة، يرجى المرور للمحل للتفاصيل."},
     {"q": "في توصيل لحمص؟", "a": "نعم، التوصيل متاح داخل دمشق فقط، ورسومه 20 ألف ليرة."},
-    {"q": "الجهاز جديد ولا مستعمل؟", "a": "جميع الأجهزة المعروضة جديدة ومغلقة بضمان الوكيل."}
+    {"q": "الجهاز جديد ولا مستعمل؟", "a": "جميع الأجهزة المعروضة جديدة ومغلقة بضمان الوكيل."},
+    {"q": "مرحبا، كيفك، أهلاً", "a": "أهلاً وسهلاً بك! كيف يمكنني مساعدتك اليوم؟"}
 ]
 
 @st.cache_resource
@@ -28,12 +29,13 @@ def get_bot_response(message):
     best_idx = cos_scores.argmax()
     best_score = cos_scores[best_idx].item()
 
-    if best_score > 0.4:
+    # تم رفع الحد إلى 0.6 لمنع الإجابات العشوائية
+    if best_score > 0.6:
         retrieved_answer = qa_data[best_idx]["a"]
         try:
             api_key = st.secrets["GROQ_API_KEY"]
             client = Groq(api_key=api_key)
-            prompt = f"أنت مساعد ودود لمحل جوالات. أجب على سؤال الزبون بأسلوب طبيعي ومختصر بناءً على هذه المعلومة فقط: {retrieved_answer}\n\nسؤال الزبون: {message}"
+            prompt = f"أنت مساعد ودود لمحل جوالات. أجب على سؤال الزبون بأسلوب طبيعي ومختصر بناءً على هذه المعلومة فقط: {retrieved_answer}\n\nإذا كانت المعلومة لا تجيب على السؤال، قل: 'عذراً، لا أملك هذه المعلومة.'\n\nسؤال الزبون: {message}"
             
             chat_completion = client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
@@ -41,6 +43,7 @@ def get_bot_response(message):
             )
             return chat_completion.choices[0].message.content
         except Exception:
+            # إذا فشل الاتصال، يعرض الجواب المباشر
             return retrieved_answer
     else:
         return "عذراً، لا أملك معلومات كافية عن هذا السؤال. يرجى التواصل معنا عبر واتساب للتفاصيل."
